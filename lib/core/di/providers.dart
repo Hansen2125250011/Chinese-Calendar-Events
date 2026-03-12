@@ -42,7 +42,8 @@ EventRepository eventRepository(EventRepositoryRef ref) {
 NotificationRepository notificationRepository(NotificationRepositoryRef ref) {
   final service = ref.watch(notificationServiceProvider);
   final lunarRepo = ref.watch(lunarRepositoryProvider);
-  return NotificationRepositoryImpl(service, lunarRepo); // Needs DB?
+  final db = ref.watch(appDatabaseProvider);
+  return NotificationRepositoryImpl(service, lunarRepo, db);
 }
 
 @riverpod

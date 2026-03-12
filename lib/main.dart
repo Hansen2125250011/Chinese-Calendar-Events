@@ -17,7 +17,9 @@ void main() async {
   final container = ProviderContainer();
 
   // Pre-initialize services
+  final notificationRepo = container.read(notificationRepositoryProvider);
   await container.read(notificationServiceProvider).init();
+  await notificationRepo.requestPermissions();
   final eventRepo = container.read(eventRepositoryProvider);
   await eventRepo.initialize();
 

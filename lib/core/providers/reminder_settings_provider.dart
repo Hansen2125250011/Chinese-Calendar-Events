@@ -34,8 +34,9 @@ class ReminderSettings {
 
 class ReminderSettingsNotifier extends StateNotifier<ReminderSettings> {
   final AppDatabase _db;
+  final Ref ref;
 
-  ReminderSettingsNotifier(this._db) : super(ReminderSettings()) {
+  ReminderSettingsNotifier(this._db, this.ref) : super(ReminderSettings()) {
     _loadSettings();
   }
 
@@ -64,6 +65,10 @@ class ReminderSettingsNotifier extends StateNotifier<ReminderSettings> {
             enableTraditionalReminders: Value(state.enableTraditionalReminders),
           ),
         );
+
+    // Sync notifications with new settings
+    final notificationRepo = ref.read(notificationRepositoryProvider);
+    await notificationRepo.syncAllNotifications();
   }
 
   void setDaysBefore(int days) {
@@ -85,5 +90,5 @@ class ReminderSettingsNotifier extends StateNotifier<ReminderSettings> {
 final reminderSettingsProvider =
     StateNotifierProvider<ReminderSettingsNotifier, ReminderSettings>((ref) {
   final db = ref.watch(appDatabaseProvider);
-  return ReminderSettingsNotifier(db);
+  return ReminderSettingsNotifier(db, ref);
 });

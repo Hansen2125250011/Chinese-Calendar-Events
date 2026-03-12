@@ -13,4 +13,5 @@ abstract class NotificationRepository {
   Future<bool> requestPermissions();
   Future<NotificationSettings> getSettings();
   Future<void> saveSettings(NotificationSettings settings);
+  Future<void> syncAllNotifications();
 }

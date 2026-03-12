@@ -3,13 +3,17 @@ import 'package:chinese_calendar/features/events/domain/entities/traditional_eve
 import 'package:chinese_calendar/features/notifications/domain/entities/notification_settings.dart';
 import 'package:chinese_calendar/features/notifications/domain/repositories/notification_repository.dart';
 import 'package:chinese_calendar/features/calendar/domain/repositories/lunar_repository.dart';
+import 'package:chinese_calendar/core/database/app_database.dart';
+import 'package:drift/drift.dart';
+import 'dart:convert';
 import 'dart:developer' as dev;
 
 class NotificationRepositoryImpl implements NotificationRepository {
   final NotificationService _service;
   final LunarRepository _lunarRepository;
+  final AppDatabase _db;
 
-  NotificationRepositoryImpl(this._service, this._lunarRepository);
+  NotificationRepositoryImpl(this._service, this._lunarRepository, this._db);
 
   @override
   Future<void> scheduleEventNotification(
@@ -265,12 +269,100 @@ class NotificationRepositoryImpl implements NotificationRepository {
 
   @override
   Future<NotificationSettings> getSettings() async {
-    // Fetch from SharedPreferences or Drift
-    return const NotificationSettings();
+    final row = await _db.select(_db.appSettings).getSingleOrNull();
+    if (row == null) return const NotificationSettings();
+
+    return NotificationSettings(
+      enabled: row.enableTraditionalReminders,
+      daysBefore: row.defaultDaysBefore,
+      reminderTime: row.reminderTime,
+    );
   }
 
   @override
   Future<void> saveSettings(NotificationSettings settings) async {
-    // Save to DB
+    await _db.into(_db.appSettings).insertOnConflictUpdate(
+          AppSettingsCompanion(
+            id: const Value(1),
+            defaultDaysBefore: Value(settings.daysBefore),
+            reminderTime: Value(settings.reminderTime),
+            enableTraditionalReminders: Value(settings.enabled),
+          ),
+        );
+  }
+
+  @override
+  Future<void> syncAllNotifications() async {
+    dev.log('NotificationRepository: Syncing all notifications...',
+        name: 'NotificationRepository');
+
+    // 1. Cancel all
+    await _service.cancelAll();
+
+    // 2. Fetch current settings
+    final settings = await getSettings();
+    if (!settings.enabled) {
+      dev.log('NotificationRepository: Notifications disabled, skipping sync.',
+          name: 'NotificationRepository');
+      return;
+    }
+
+    // 3. Reschedule Traditional & Deity Events
+    final traditionalEvents = await _db.select(_db.traditionalEvents).get();
+    for (final entity in traditionalEvents) {
+      if (entity.notificationsEnabled) {
+        // Map to domain entity first (using repository logic or similar)
+        // Since we are in the repo, we can manually map or use the event repository
+        // For simplicity here, we'll re-map
+        final Map<String, dynamic> names = jsonDecode(entity.name);
+        final enName = names['en'] ?? entity.name;
+
+        await scheduleEventNotification(
+          TraditionalEvent(
+            id: entity.id,
+            name: enName,
+            localizedNames: names,
+            localizedDescriptions: jsonDecode(entity.description),
+            lunarMonth: entity.lunarMonth,
+            lunarDay: entity.lunarDay,
+            isMajor: entity.isMajor,
+            notificationsEnabled: entity.notificationsEnabled,
+          ),
+          settings,
+        );
+      }
+    }
+
+    // 4. Reschedule Custom Events
+    final customEvents = await _db.select(_db.customEvents).get();
+    for (final event in customEvents) {
+      // Custom events don't have a toggle yet, but let's assume they are all enabled if created
+      // or we check a 'reminders_enabled' column if added later.
+      // For now, custom events are scheduled if they exist.
+      // We need reminder settings for EACH custom event if they are unique.
+      // Currently, the UI saves them to UserReminders table too.
+      final reminder = await (_db.select(_db.userReminders)
+            ..where((t) => t.eventId.equals('custom_${event.id}')))
+          .getSingleOrNull();
+
+      if (reminder != null) {
+        final timeParts = reminder.time.split(':');
+        await scheduleCustomEvent(
+          event.id,
+          event.name,
+          event.isLunar,
+          event.month,
+          event.day,
+          event.year,
+          event.isLeap,
+          reminder.daysBefore,
+          int.parse(timeParts[0]),
+          int.parse(timeParts[1]),
+        );
+      }
+    }
+
+    dev.log('NotificationRepository: All notifications synced successfully.',
+        name: 'NotificationRepository');
   }
 }

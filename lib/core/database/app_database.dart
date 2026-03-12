@@ -54,13 +54,10 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (Migrator m) async {
-          await m.createAll();
-        },
         onUpgrade: (Migrator m, int from, int to) async {
           if (from < 2) {
             await m.createTable(customEvents);
@@ -70,9 +67,44 @@ class AppDatabase extends _$AppDatabase {
                 traditionalEvents, traditionalEvents.notificationsEnabled);
           }
           if (from < 4) {
+            // Version 4 was supposed to create these, but some users might have missed them
             await m.createTable(appSettings);
             await m.createTable(userReminders);
           }
+          if (from < 5) {
+            // Version 5 fix: Recreate custom_events to remove legacy 'date' column
+            // and ensure appSettings is created if it was missed in v4
+            final tableNames =
+                (await customSelect("SELECT name FROM sqlite_master WHERE type='table'").get())
+                    .map((row) => row.read<String>('name'))
+                    .toList();
+
+            if (!tableNames.contains('app_settings')) {
+              await m.createTable(appSettings);
+            }
+            if (!tableNames.contains('user_reminders')) {
+              await m.createTable(userReminders);
+            }
+
+            // Standard approach to remove a column or fix constraints in SQLite
+            // 1. Rename existing table
+            await customStatement('ALTER TABLE custom_events RENAME TO custom_events_old');
+            // 2. Create the table with correct schema
+            await m.createTable(customEvents);
+            // 3. Copy data (excluding the problematic 'date' column)
+            await customStatement(
+              'INSERT INTO custom_events (id, name, is_lunar, year, month, day, is_leap) '
+              'SELECT id, name, is_lunar, year, month, day, is_leap FROM custom_events_old',
+            );
+            // 4. Drop old table
+            await customStatement('DROP TABLE custom_events_old');
+          }
+        },
+        onCreate: (Migrator m) async {
+          await m.createAll();
+        },
+        beforeOpen: (details) async {
+          await customStatement('PRAGMA foreign_keys = ON');
         },
       );
 }

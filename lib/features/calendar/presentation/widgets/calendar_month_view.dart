@@ -6,6 +6,8 @@ import 'package:chinese_calendar/core/di/providers.dart';
 import 'package:chinese_calendar/features/calendar/domain/entities/lunar_date.dart';
 import 'package:intl/intl.dart';
 import 'package:chinese_calendar/core/utils/lunar_helper.dart';
+import 'package:chinese_calendar/features/calendar/presentation/widgets/calendar_year_view_widget.dart';
+import 'package:chinese_calendar/features/calendar/presentation/widgets/calendar_decade_view_widget.dart';
 
 class CalendarMonthView extends ConsumerStatefulWidget {
   const CalendarMonthView({super.key});
@@ -55,8 +57,11 @@ class _CalendarMonthViewState extends ConsumerState<CalendarMonthView> {
       }
     });
 
+    final viewMode = ref.watch(calendarViewModeNotifierProvider);
+
     return Column(
       children: [
+        if (viewMode == CalendarViewMode.month) ...[
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -70,11 +75,16 @@ class _CalendarMonthViewState extends ConsumerState<CalendarMonthView> {
               },
             ),
             Expanded(
-              child: Text(
-                DateFormat('MMMM yyyy').format(currentMonth),
-                style: theme.textTheme.titleLarge,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
+              child: GestureDetector(
+                onTap: () {
+                  ref.read(calendarViewModeNotifierProvider.notifier).setMode(CalendarViewMode.year);
+                },
+                child: Text(
+                  DateFormat('MMMM yyyy').format(currentMonth),
+                  style: theme.textTheme.titleLarge,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
             IconButton(
@@ -123,6 +133,11 @@ class _CalendarMonthViewState extends ConsumerState<CalendarMonthView> {
             },
           ),
         ),
+        ] else if (viewMode == CalendarViewMode.year) ...[
+          const Expanded(child: CalendarYearViewWidget()),
+        ] else ...[
+          const Expanded(child: CalendarDecadeViewWidget()),
+        ],
       ],
     );
   }
@@ -217,11 +232,10 @@ class _CalendarDayCell extends ConsumerWidget {
                         ),
                         // Event Dot
                         Consumer(builder: (context, ref, _) {
-                          final eventsAsync =
-                              ref.watch(eventsForLunarDateProvider(lunar));
-                          return eventsAsync.maybeWhen(
-                            data: (events) {
-                              if (events.isNotEmpty) {
+                          final hasEventsAsync = ref.watch(hasEventsForDateProvider(date));
+                          return hasEventsAsync.maybeWhen(
+                            data: (hasEvents) {
+                              if (hasEvents) {
                                 return Container(
                                   margin: const EdgeInsets.only(top: 2),
                                   width: 4,
