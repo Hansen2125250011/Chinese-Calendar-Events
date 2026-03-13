@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:chinese_calendar/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 import 'package:chinese_calendar/core/theme/app_theme.dart';
 import 'package:chinese_calendar/core/di/providers.dart';
 import 'package:chinese_calendar/core/providers/locale_provider.dart';
@@ -20,6 +21,17 @@ void main() async {
   final notificationRepo = container.read(notificationRepositoryProvider);
   await container.read(notificationServiceProvider).init();
   await notificationRepo.requestPermissions();
+  // Optional: force debug notifications in release by setting
+  // --dart-define=FORCE_DEBUG_NOTIFS=true when building the app.
+  const bool forceDebugNotifs = bool.fromEnvironment('FORCE_DEBUG_NOTIFS', defaultValue: false);
+  if (kDebugMode || forceDebugNotifs) {
+    // schedule debug notifications to help reproduce delivery issues on devices
+    try {
+      await container.read(notificationServiceProvider).scheduleDebugNotifications();
+    } catch (e) {
+      // ignore errors here; debug helper shouldn't crash startup
+    }
+  }
   final eventRepo = container.read(eventRepositoryProvider);
   await eventRepo.initialize();
 

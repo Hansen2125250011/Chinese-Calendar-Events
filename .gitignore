@@ -72,3 +72,20 @@ app.*.map.json
 # Web
 /web/
 
+# Logs and temporary files
+*.log
+notif.log
+.temp/
+.cache/
+
+# Android-specific
+android/key.properties
+android/app/*.keystore
+android/app/*.jks
+*.ap_
+*.apk
+*.dex
+
+# Local environment
+.env*
+local.properties
