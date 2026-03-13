@@ -27,8 +27,12 @@ class NotificationRepositoryImpl implements NotificationRepository {
     try {
       final parts = settings.reminderTime.split(':');
       if (parts.length == 2) {
-        hour = int.parse(parts[0]);
-        minute = int.parse(parts[1]);
+        final h = int.tryParse(parts[0]);
+        final m = int.tryParse(parts[1]);
+        if (h != null && m != null && h >= 0 && h < 24 && m >= 0 && m < 60) {
+          hour = h;
+          minute = m;
+        }
       }
     } catch (_) {}
 
@@ -88,7 +92,8 @@ class NotificationRepositoryImpl implements NotificationRepository {
     }
   }
 
-  Future<void> scheduleTraditionalEvents(List<TraditionalEvent> events,
+    @override
+    Future<void> scheduleTraditionalEvents(List<TraditionalEvent> events,
       bool enable, NotificationSettings settings) async {
     if (!enable) {
       final List<Future<void>> cancelFutures = events
@@ -347,6 +352,16 @@ class NotificationRepositoryImpl implements NotificationRepository {
 
       if (reminder != null) {
         final timeParts = reminder.time.split(':');
+        int rHour = 9;
+        int rMinute = 0;
+        if (timeParts.length == 2) {
+          final th = int.tryParse(timeParts[0]);
+          final tm = int.tryParse(timeParts[1]);
+          if (th != null && tm != null && th >= 0 && th < 24 && tm >= 0 && tm < 60) {
+            rHour = th;
+            rMinute = tm;
+          }
+        }
         await scheduleCustomEvent(
           event.id,
           event.name,
@@ -356,8 +371,8 @@ class NotificationRepositoryImpl implements NotificationRepository {
           event.year,
           event.isLeap,
           reminder.daysBefore,
-          int.parse(timeParts[0]),
-          int.parse(timeParts[1]),
+          rHour,
+          rMinute,
         );
       }
     }

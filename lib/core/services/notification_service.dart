@@ -4,27 +4,47 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'dart:developer' as dev;
+import 'package:flutter/foundation.dart';
 
 class NotificationService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
+  Future<void>? _initFuture;
 
   Future<void> init() async {
     if (_isInitialized) {
       dev.log('NotificationService: Already initialized, skipping.');
       return;
     }
+    if (_initFuture != null) {
+      // Another caller is initializing; await the same future to avoid races.
+      await _initFuture;
+      return;
+    }
+
+    _initFuture = _initInternal();
+    try {
+      await _initFuture;
+    } finally {
+      _initFuture = null;
+    }
+  }
+
+  Future<void> _initInternal() async {
     tz.initializeTimeZones();
     try {
       final String timeZoneName = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(timeZoneName));
       dev.log('NotificationService: Local timezone set to $timeZoneName');
+      print('NotificationService: Local timezone set to $timeZoneName');
       dev.log(
-          'NotificationService: Current TZ time: ${tz.TZDateTime.now(tz.local)}');
+        'NotificationService: Current TZ time: ${tz.TZDateTime.now(tz.local)}');
+      print('NotificationService: Current TZ time: ${tz.TZDateTime.now(tz.local)}');
     } catch (e) {
       dev.log(
-          'NotificationService: Failed to get local timezone, falling back to UTC. Error: $e');
+        'NotificationService: Failed to get local timezone, falling back to UTC. Error: $e');
+      print('NotificationService: Failed to get local timezone, falling back to UTC. Error: $e');
     }
 
     await _createNotificationChannel();
@@ -40,6 +60,7 @@ class NotificationService {
     await _notificationsPlugin.initialize(initializationSettings);
     _isInitialized = true;
     dev.log('NotificationService: Initialization complete.');
+    print('NotificationService: Initialization complete.');
   }
 
   Future<bool?> requestPermissions() async {
@@ -52,11 +73,17 @@ class NotificationService {
   }
 
   Future<bool> isPermissionGranted() async {
-    final bool? granted = await _notificationsPlugin
+    // Prefer a non-invasive check if the platform supports it.
+    final androidImpl = _notificationsPlugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission(); // In newer versions, this just checks if not already asked? No, let's use permission_handler
-    return granted ?? false;
+            AndroidFlutterLocalNotificationsPlugin>();
+    try {
+      final bool? enabled = await androidImpl?.areNotificationsEnabled();
+      if (enabled != null) return enabled;
+    } catch (_) {}
+
+    // Fallback: don't trigger a permission prompt; return false if unknown.
+    return false;
   }
 
   Future<void> scheduleNotification({
@@ -91,9 +118,11 @@ class NotificationService {
             UILocalNotificationDateInterpretation.absoluteTime,
       );
       dev.log('NotificationService: Exact notification scheduled successfully');
+      print('NotificationService: Exact notification scheduled successfully for $id at $scheduledDate');
     } catch (e) {
       dev.log(
           'NotificationService: Precise scheduling failed, falling back to inexact. Error: $e');
+      print('NotificationService: Precise scheduling failed: $e');
       // Fallback to inexact if exact is not permitted
       try {
         await _notificationsPlugin.zonedSchedule(
@@ -118,11 +147,33 @@ class NotificationService {
         );
         dev.log(
             'NotificationService: Inexact notification scheduled successfully');
+        print('NotificationService: Inexact notification scheduled successfully for $id at $scheduledDate');
       } catch (e2) {
         dev.log(
             'NotificationService: ALL scheduling attempts failed. Error: $e2');
+        print('NotificationService: ALL scheduling attempts failed. Error: $e2');
       }
     }
+  }
+
+  /// Debug helper: show an immediate notification and schedule another a few
+  /// minutes later to test background delivery. Only active in debug mode.
+  Future<void> scheduleDebugNotifications() async {
+    if (!kDebugMode) return;
+    await showInstantNotification(
+      id: 999999,
+      title: 'Debug Notification (Immediate)',
+      body: 'This is an immediate debug notification',
+    );
+
+    final scheduled = DateTime.now().add(const Duration(minutes: 2));
+    await scheduleNotification(
+      id: 999998,
+      title: 'Debug Notification (Scheduled)',
+      body: 'This notification was scheduled 2 minutes earlier for testing',
+      scheduledDate: scheduled,
+    );
+    print('NotificationService: Debug notifications scheduled.');
   }
 
   Future<void> _createNotificationChannel() async {

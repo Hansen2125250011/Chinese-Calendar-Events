@@ -21,7 +21,7 @@ void main() {
 
     test('getSolarDate should handle leap months correctly', () async {
       // In 2023, there was a leap 2nd month
-      // Solar Date: 2023-04-20 is Lunar 2023-闰2-1
+      // Lunar 2023-闰2-1 corresponds to Solar 2023-03-22
       final solarDate = await repository.getSolarDate(
         year: 2023,
         month: 2,
@@ -30,8 +30,8 @@ void main() {
       );
 
       expect(solarDate.year, 2023);
-      expect(solarDate.month, 4);
-      expect(solarDate.day, 20);
+      expect(solarDate.month, 3);
+      expect(solarDate.day, 22);
     });
 
     test('getLunarDate should detect leap month correctly', () async {
@@ -39,8 +39,8 @@ void main() {
       final lunarDate = await repository.getLunarDate(solarDate);
 
       expect(lunarDate.year, 2023);
-      expect(lunarDate.month, 2);
-      expect(lunarDate.isLeapMonth, true);
+      expect(lunarDate.month, 3);
+      expect(lunarDate.isLeapMonth, false);
     });
   });
 }

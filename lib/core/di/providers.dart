@@ -22,8 +22,10 @@ AppDatabase appDatabase(AppDatabaseRef ref) {
 // Data Sources / Services
 @Riverpod(keepAlive: true)
 NotificationService notificationService(NotificationServiceRef ref) {
-  return NotificationService()
-    ..init(); // Initialize on creation? Or separate init logic.
+  // Return service instance; initialization is performed explicitly by the
+  // application (see `main.dart`) to ensure initialization is awaited and not
+  // started twice concurrently.
+  return NotificationService();
 }
 
 // Repositories
