@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chinese_calendar/features/calendar/presentation/providers/calendar_providers.dart';
-import 'package:chinese_calendar/features/events/presentation/providers/event_providers.dart';
 import 'package:chinese_calendar/core/di/providers.dart';
 import 'package:chinese_calendar/features/calendar/domain/entities/lunar_date.dart';
 import 'package:intl/intl.dart';
@@ -62,77 +61,79 @@ class _CalendarMonthViewState extends ConsumerState<CalendarMonthView> {
     return Column(
       children: [
         if (viewMode == CalendarViewMode.month) ...[
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.chevron_left),
-              onPressed: () {
-                _pageController.previousPage(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              },
-            ),
-            Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  ref.read(calendarViewModeNotifierProvider.notifier).setMode(CalendarViewMode.year);
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: () {
+                  _pageController.previousPage(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
                 },
-                child: Text(
-                  DateFormat('MMMM yyyy').format(currentMonth),
-                  style: theme.textTheme.titleLarge,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
+              ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    ref
+                        .read(calendarViewModeNotifierProvider.notifier)
+                        .setMode(CalendarViewMode.year);
+                  },
+                  child: Text(
+                    DateFormat('MMMM yyyy').format(currentMonth),
+                    style: theme.textTheme.titleLarge,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.chevron_right),
-              onPressed: () {
-                _pageController.nextPage(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              },
-            ),
-          ],
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-              .map((day) => Expanded(
-                    child: Center(
-                      child: Text(
-                        day,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: day == 'Sun' ? Colors.red : null,
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: () {
+                  _pageController.nextPage(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                },
+              ),
+            ],
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+                .map((day) => Expanded(
+                      child: Center(
+                        child: Text(
+                          day,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: day == 'Sun' ? Colors.red : null,
+                          ),
                         ),
                       ),
-                    ),
-                  ))
-              .toList(),
-        ),
-        Expanded(
-          child: PageView.builder(
-            scrollDirection: Axis.horizontal,
-            controller: _pageController,
-            onPageChanged: (index) {
-              final newMonth =
-                  DateTime(_baseDate.year, _baseDate.month + index, 1);
-              // Avoid redundant updates if already same (though provider handles it)
-              if (!DateUtils.isSameMonth(
-                  ref.read(currentMonthProvider), newMonth)) {
-                ref.read(currentMonthProvider.notifier).setMonth(newMonth);
-              }
-            },
-            itemBuilder: (context, index) {
-              final monthDate =
-                  DateTime(_baseDate.year, _baseDate.month + index, 1);
-              return _MonthGrid(currentMonth: monthDate);
-            },
+                    ))
+                .toList(),
           ),
-        ),
+          Expanded(
+            child: PageView.builder(
+              scrollDirection: Axis.horizontal,
+              controller: _pageController,
+              onPageChanged: (index) {
+                final newMonth =
+                    DateTime(_baseDate.year, _baseDate.month + index, 1);
+                // Avoid redundant updates if already same (though provider handles it)
+                if (!DateUtils.isSameMonth(
+                    ref.read(currentMonthProvider), newMonth)) {
+                  ref.read(currentMonthProvider.notifier).setMonth(newMonth);
+                }
+              },
+              itemBuilder: (context, index) {
+                final monthDate =
+                    DateTime(_baseDate.year, _baseDate.month + index, 1);
+                return _MonthGrid(currentMonth: monthDate);
+              },
+            ),
+          ),
         ] else if (viewMode == CalendarViewMode.year) ...[
           const Expanded(child: CalendarYearViewWidget()),
         ] else ...[
@@ -232,7 +233,8 @@ class _CalendarDayCell extends ConsumerWidget {
                         ),
                         // Event Dot
                         Consumer(builder: (context, ref, _) {
-                          final hasEventsAsync = ref.watch(hasEventsForDateProvider(date));
+                          final hasEventsAsync =
+                              ref.watch(hasEventsForDateProvider(date));
                           return hasEventsAsync.maybeWhen(
                             data: (hasEvents) {
                               if (hasEvents) {

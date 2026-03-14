@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:chinese_calendar/core/database/app_database.dart';
 import 'package:chinese_calendar/features/calendar/data/repositories/lunar_repository_impl.dart';
@@ -15,13 +16,13 @@ part 'providers.g.dart';
 
 // Database
 @Riverpod(keepAlive: true)
-AppDatabase appDatabase(AppDatabaseRef ref) {
+AppDatabase appDatabase(Ref ref) {
   return AppDatabase();
 }
 
 // Data Sources / Services
 @Riverpod(keepAlive: true)
-NotificationService notificationService(NotificationServiceRef ref) {
+NotificationService notificationService(Ref ref) {
   // Return service instance; initialization is performed explicitly by the
   // application (see `main.dart`) to ensure initialization is awaited and not
   // started twice concurrently.
@@ -30,18 +31,18 @@ NotificationService notificationService(NotificationServiceRef ref) {
 
 // Repositories
 @riverpod
-LunarRepository lunarRepository(LunarRepositoryRef ref) {
+LunarRepository lunarRepository(Ref ref) {
   return LunarRepositoryImpl();
 }
 
 @riverpod
-EventRepository eventRepository(EventRepositoryRef ref) {
+EventRepository eventRepository(Ref ref) {
   final db = ref.watch(appDatabaseProvider);
   return EventRepositoryImpl(db);
 }
 
 @riverpod
-NotificationRepository notificationRepository(NotificationRepositoryRef ref) {
+NotificationRepository notificationRepository(Ref ref) {
   final service = ref.watch(notificationServiceProvider);
   final lunarRepo = ref.watch(lunarRepositoryProvider);
   final db = ref.watch(appDatabaseProvider);
@@ -49,7 +50,7 @@ NotificationRepository notificationRepository(NotificationRepositoryRef ref) {
 }
 
 @riverpod
-CustomEventRepository customEventRepository(CustomEventRepositoryRef ref) {
+CustomEventRepository customEventRepository(Ref ref) {
   final db = ref.watch(appDatabaseProvider);
   return CustomEventRepositoryImpl(db);
 }

@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:chinese_calendar/features/calendar/presentation/pages/calendar_page.dart';
@@ -6,7 +7,7 @@ import 'package:chinese_calendar/features/settings/presentation/pages/settings_p
 part 'app_router.g.dart';
 
 @riverpod
-GoRouter goRouter(GoRouterRef ref) {
+GoRouter goRouter(Ref ref) {
   return GoRouter(
     initialLocation: '/',
     debugLogDiagnostics: true,

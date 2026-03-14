@@ -37,14 +37,16 @@ class NotificationService {
       final String timeZoneName = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(timeZoneName));
       dev.log('NotificationService: Local timezone set to $timeZoneName');
-      print('NotificationService: Local timezone set to $timeZoneName');
+      debugPrint('NotificationService: Local timezone set to $timeZoneName');
       dev.log(
-        'NotificationService: Current TZ time: ${tz.TZDateTime.now(tz.local)}');
-      print('NotificationService: Current TZ time: ${tz.TZDateTime.now(tz.local)}');
+          'NotificationService: Current TZ time: ${tz.TZDateTime.now(tz.local)}');
+      debugPrint(
+          'NotificationService: Current TZ time: ${tz.TZDateTime.now(tz.local)}');
     } catch (e) {
       dev.log(
-        'NotificationService: Failed to get local timezone, falling back to UTC. Error: $e');
-      print('NotificationService: Failed to get local timezone, falling back to UTC. Error: $e');
+          'NotificationService: Failed to get local timezone, falling back to UTC. Error: $e');
+      debugPrint(
+          'NotificationService: Failed to get local timezone, falling back to UTC. Error: $e');
     }
 
     await _createNotificationChannel();
@@ -60,7 +62,7 @@ class NotificationService {
     await _notificationsPlugin.initialize(initializationSettings);
     _isInitialized = true;
     dev.log('NotificationService: Initialization complete.');
-    print('NotificationService: Initialization complete.');
+    debugPrint('NotificationService: Initialization complete.');
   }
 
   Future<bool?> requestPermissions() async {
@@ -74,8 +76,8 @@ class NotificationService {
 
   Future<bool> isPermissionGranted() async {
     // Prefer a non-invasive check if the platform supports it.
-    final androidImpl = _notificationsPlugin
-        .resolvePlatformSpecificImplementation<
+    final androidImpl =
+        _notificationsPlugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
     try {
       final bool? enabled = await androidImpl?.areNotificationsEnabled();
@@ -118,11 +120,12 @@ class NotificationService {
             UILocalNotificationDateInterpretation.absoluteTime,
       );
       dev.log('NotificationService: Exact notification scheduled successfully');
-      print('NotificationService: Exact notification scheduled successfully for $id at $scheduledDate');
+      debugPrint(
+          'NotificationService: Exact notification scheduled successfully for $id at $scheduledDate');
     } catch (e) {
       dev.log(
           'NotificationService: Precise scheduling failed, falling back to inexact. Error: $e');
-      print('NotificationService: Precise scheduling failed: $e');
+      debugPrint('NotificationService: Precise scheduling failed: $e');
       // Fallback to inexact if exact is not permitted
       try {
         await _notificationsPlugin.zonedSchedule(
@@ -147,11 +150,13 @@ class NotificationService {
         );
         dev.log(
             'NotificationService: Inexact notification scheduled successfully');
-        print('NotificationService: Inexact notification scheduled successfully for $id at $scheduledDate');
+        debugPrint(
+            'NotificationService: Inexact notification scheduled successfully for $id at $scheduledDate');
       } catch (e2) {
         dev.log(
             'NotificationService: ALL scheduling attempts failed. Error: $e2');
-        print('NotificationService: ALL scheduling attempts failed. Error: $e2');
+        debugPrint(
+            'NotificationService: ALL scheduling attempts failed. Error: $e2');
       }
     }
   }
@@ -173,7 +178,7 @@ class NotificationService {
       body: 'This notification was scheduled 2 minutes earlier for testing',
       scheduledDate: scheduled,
     );
-    print('NotificationService: Debug notifications scheduled.');
+    debugPrint('NotificationService: Debug notifications scheduled.');
   }
 
   Future<void> _createNotificationChannel() async {

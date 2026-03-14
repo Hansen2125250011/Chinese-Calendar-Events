@@ -18,7 +18,9 @@ class CalendarYearViewWidget extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(vertical: 8.0),
           child: GestureDetector(
             onTap: () {
-              ref.read(calendarViewModeNotifierProvider.notifier).setMode(CalendarViewMode.decade);
+              ref
+                  .read(calendarViewModeNotifierProvider.notifier)
+                  .setMode(CalendarViewMode.decade);
             },
             child: Text(
               '${currentMonth.year}',
@@ -48,19 +50,28 @@ class CalendarYearViewWidget extends ConsumerWidget {
               return GestureDetector(
                 onTap: () {
                   ref.read(currentMonthProvider.notifier).setMonth(date);
-                  ref.read(calendarViewModeNotifierProvider.notifier).setMode(CalendarViewMode.month);
+                  ref
+                      .read(calendarViewModeNotifierProvider.notifier)
+                      .setMode(CalendarViewMode.month);
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    color: isSelected ? theme.colorScheme.primaryContainer : theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                    color: isSelected
+                        ? theme.colorScheme.primaryContainer
+                        : theme.colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(12),
-                    border: isSelected ? Border.all(color: theme.colorScheme.primary) : null,
+                    border: isSelected
+                        ? Border.all(color: theme.colorScheme.primary)
+                        : null,
                   ),
                   child: Center(
                     child: Text(
                       DateFormat('MMM').format(date),
                       style: theme.textTheme.titleMedium?.copyWith(
-                        color: isSelected ? theme.colorScheme.onPrimaryContainer : null,
+                        color: isSelected
+                            ? theme.colorScheme.onPrimaryContainer
+                            : null,
                         fontWeight: isSelected ? FontWeight.bold : null,
                       ),
                     ),

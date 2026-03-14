@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:lunar/lunar.dart';
 
@@ -31,7 +32,7 @@ class SeasonalThemeInfo {
 }
 
 @riverpod
-SeasonalThemeInfo seasonalTheme(SeasonalThemeRef ref) {
+SeasonalThemeInfo seasonalTheme(Ref ref) {
   final now = DateTime.now();
 
   // Check next 7 days

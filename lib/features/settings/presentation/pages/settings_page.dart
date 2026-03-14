@@ -4,10 +4,8 @@ import 'package:chinese_calendar/core/providers/locale_provider.dart';
 import 'package:chinese_calendar/l10n/app_localizations.dart';
 import 'package:chinese_calendar/core/providers/theme_provider.dart';
 import 'package:chinese_calendar/core/di/providers.dart';
-import 'package:chinese_calendar/core/services/notification_service.dart';
 import 'package:chinese_calendar/core/providers/reminder_settings_provider.dart';
 import 'package:chinese_calendar/features/notifications/domain/entities/notification_settings.dart';
-import 'package:chinese_calendar/features/notifications/domain/repositories/notification_repository.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -50,16 +48,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             title: Text(l10n.notifications),
             subtitle: const Text('Check permissions'),
             leading: const Icon(Icons.notifications),
-            onTap: () {
-              ref
+            onTap: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final granted = await ref
                   .read(notificationServiceProvider)
-                  .requestPermissions()
-                  .then((granted) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Permissions granted: $granted')));
-                }
-              });
+                  .requestPermissions();
+              
+              if (mounted) {
+                messenger.showSnackBar(
+                    SnackBar(content: Text('Permissions granted: $granted')));
+              }
             },
           ),
           const Divider(),
@@ -239,14 +237,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ),
     );
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Notifications synchronized'),
-          duration: Duration(seconds: 1),
-        ),
-      );
-    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Notifications synchronized'),
+        duration: Duration(seconds: 1),
+      ),
+    );
   }
 }
 

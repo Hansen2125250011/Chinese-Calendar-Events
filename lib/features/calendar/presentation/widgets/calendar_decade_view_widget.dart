@@ -6,10 +6,12 @@ class CalendarDecadeViewWidget extends ConsumerStatefulWidget {
   const CalendarDecadeViewWidget({super.key});
 
   @override
-  ConsumerState<CalendarDecadeViewWidget> createState() => _CalendarDecadeViewWidgetState();
+  ConsumerState<CalendarDecadeViewWidget> createState() =>
+      _CalendarDecadeViewWidgetState();
 }
 
-class _CalendarDecadeViewWidgetState extends ConsumerState<CalendarDecadeViewWidget> {
+class _CalendarDecadeViewWidgetState
+    extends ConsumerState<CalendarDecadeViewWidget> {
   late PageController _pageController;
   final int _baseYear = 1900;
   int _currentPage = 0;
@@ -82,7 +84,7 @@ class _CalendarDecadeViewWidgetState extends ConsumerState<CalendarDecadeViewWid
             },
             itemBuilder: (context, pageIndex) {
               final decadeStart = _baseYear + (pageIndex * 10);
-              
+
               return GridView.builder(
                 padding: const EdgeInsets.all(16),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -95,28 +97,42 @@ class _CalendarDecadeViewWidgetState extends ConsumerState<CalendarDecadeViewWid
                 itemBuilder: (context, index) {
                   final year = decadeStart - 1 + index;
                   final isSelected = currentMonth.year == year;
-                  final inDecade = year >= decadeStart && year < decadeStart + 10;
+                  final inDecade =
+                      year >= decadeStart && year < decadeStart + 10;
 
                   return GestureDetector(
                     onTap: () {
-                      ref.read(currentMonthProvider.notifier).setMonth(DateTime(year, currentMonth.month, 1));
-                      ref.read(calendarViewModeNotifierProvider.notifier).setMode(CalendarViewMode.year);
+                      ref
+                          .read(currentMonthProvider.notifier)
+                          .setMonth(DateTime(year, currentMonth.month, 1));
+                      ref
+                          .read(calendarViewModeNotifierProvider.notifier)
+                          .setMode(CalendarViewMode.year);
                     },
                     child: Container(
                       decoration: BoxDecoration(
-                        color: isSelected 
-                            ? theme.colorScheme.primaryContainer 
-                            : (inDecade ? theme.colorScheme.surfaceVariant.withOpacity(0.3) : theme.colorScheme.surfaceVariant.withOpacity(0.1)),
+                        color: isSelected
+                            ? theme.colorScheme.primaryContainer
+                            : (inDecade
+                                ? theme.colorScheme.surfaceContainerHighest
+                                    .withValues(alpha: 0.3)
+                                : theme.colorScheme.surfaceContainerHighest
+                                    .withValues(alpha: 0.1)),
                         borderRadius: BorderRadius.circular(12),
-                        border: isSelected ? Border.all(color: theme.colorScheme.primary) : null,
+                        border: isSelected
+                            ? Border.all(color: theme.colorScheme.primary)
+                            : null,
                       ),
                       child: Center(
                         child: Text(
                           '$year',
                           style: theme.textTheme.titleMedium?.copyWith(
-                            color: isSelected 
-                                ? theme.colorScheme.onPrimaryContainer 
-                                : (inDecade ? null : theme.colorScheme.onSurface.withOpacity(0.3)),
+                            color: isSelected
+                                ? theme.colorScheme.onPrimaryContainer
+                                : (inDecade
+                                    ? null
+                                    : theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.3)),
                             fontWeight: isSelected ? FontWeight.bold : null,
                           ),
                         ),

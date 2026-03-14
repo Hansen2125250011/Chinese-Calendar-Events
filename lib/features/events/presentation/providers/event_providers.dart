@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:chinese_calendar/features/events/domain/entities/traditional_event.dart';
 import 'package:chinese_calendar/core/di/providers.dart';
@@ -9,14 +10,14 @@ part 'event_providers.g.dart';
 
 @riverpod
 Future<List<TraditionalEvent>> eventsForLunarMonth(
-    EventsForLunarMonthRef ref, int year, int month) async {
+    Ref ref, int year, int month) async {
   final repo = ref.watch(eventRepositoryProvider);
   return repo.getEventsForMonth(year, month);
 }
 
 @riverpod
 Future<List<TraditionalEvent>> eventsForLunarDate(
-    EventsForLunarDateRef ref, LunarDate date) async {
+    Ref ref, LunarDate date) async {
   final events = await ref
       .watch(eventsForLunarMonthProvider(date.year, date.month).future);
   return events.where((e) => e.lunarDay == date.day).toList();

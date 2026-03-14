@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:chinese_calendar/features/calendar/domain/entities/lunar_date.dart';
 import 'package:chinese_calendar/features/events/presentation/providers/event_providers.dart';
@@ -25,12 +26,13 @@ class SelectedDate extends _$SelectedDate {
 }
 
 @riverpod
-Future<bool> hasEventsForDate(HasEventsForDateRef ref, DateTime date) async {
+Future<bool> hasEventsForDate(Ref ref, DateTime date) async {
   final lunarRepo = ref.watch(lunarRepositoryProvider);
   final lunar = await lunarRepo.getLunarDate(date);
 
   // 1. Traditional & Deity Events (via existing provider)
-  final traditionalEvents = await ref.watch(eventsForLunarDateProvider(lunar).future);
+  final traditionalEvents =
+      await ref.watch(eventsForLunarDateProvider(lunar).future);
   if (traditionalEvents.isNotEmpty) return true;
 
   // 2. Custom Events
@@ -69,7 +71,7 @@ class CurrentMonth extends _$CurrentMonth {
 }
 
 @riverpod
-Future<LunarDate> currentLunarDate(CurrentLunarDateRef ref) async {
+Future<LunarDate> currentLunarDate(Ref ref) async {
   final date = ref.watch(selectedDateProvider);
   final repo = ref.watch(lunarRepositoryProvider);
   return repo.getLunarDate(date);
