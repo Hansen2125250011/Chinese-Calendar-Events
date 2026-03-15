@@ -1,6 +1,7 @@
 import 'package:chinese_calendar/core/database/app_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:chinese_calendar/core/di/providers.dart';
 import 'package:drift/drift.dart';
 

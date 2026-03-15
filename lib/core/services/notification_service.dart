@@ -6,6 +6,12 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'dart:developer' as dev;
 import 'package:flutter/foundation.dart';
 
+@pragma('vm:entry-point')
+void notificationTapBackground(NotificationResponse notificationResponse) {
+  // Handle notification tap in background
+  debugPrint('NotificationService: Background notification tapped: ${notificationResponse.id}');
+}
+
 class NotificationService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
@@ -34,7 +40,7 @@ class NotificationService {
   Future<void> _initInternal() async {
     tz.initializeTimeZones();
     try {
-      final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+      final String timeZoneName = (await FlutterTimezone.getLocalTimezone()).identifier;
       tz.setLocalLocation(tz.getLocation(timeZoneName));
       dev.log('NotificationService: Local timezone set to $timeZoneName');
       debugPrint('NotificationService: Local timezone set to $timeZoneName');
@@ -59,7 +65,13 @@ class NotificationService {
       android: initializationSettingsAndroid,
     );
 
-    await _notificationsPlugin.initialize(initializationSettings);
+    await _notificationsPlugin.initialize(
+      settings: initializationSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        dev.log('NotificationService: Notification tapped in foreground: ${response.id}');
+      },
+      onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
+    );
     _isInitialized = true;
     dev.log('NotificationService: Initialization complete.');
     debugPrint('NotificationService: Initialization complete.');
@@ -100,11 +112,11 @@ class NotificationService {
         'NotificationService: Scheduling notification ID $id at $scheduledDate');
     try {
       await _notificationsPlugin.zonedSchedule(
-        id,
-        title,
-        body,
-        tz.TZDateTime.from(scheduledDate, tz.local),
-        const NotificationDetails(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: tz.TZDateTime.from(scheduledDate, tz.local),
+        notificationDetails: const NotificationDetails(
           android: AndroidNotificationDetails(
             AppConstants.notificationChannelId,
             AppConstants.notificationChannelName,
@@ -116,8 +128,6 @@ class NotificationService {
           ),
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
       );
       dev.log('NotificationService: Exact notification scheduled successfully');
       debugPrint(
@@ -129,11 +139,11 @@ class NotificationService {
       // Fallback to inexact if exact is not permitted
       try {
         await _notificationsPlugin.zonedSchedule(
-          id,
-          title,
-          body,
-          tz.TZDateTime.from(scheduledDate, tz.local),
-          const NotificationDetails(
+          id: id,
+          title: title,
+          body: body,
+          scheduledDate: tz.TZDateTime.from(scheduledDate, tz.local),
+          notificationDetails: const NotificationDetails(
             android: AndroidNotificationDetails(
               AppConstants.notificationChannelId,
               AppConstants.notificationChannelName,
@@ -145,8 +155,6 @@ class NotificationService {
             ),
           ),
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
         );
         dev.log(
             'NotificationService: Inexact notification scheduled successfully');
@@ -204,10 +212,10 @@ class NotificationService {
     required String body,
   }) async {
     await _notificationsPlugin.show(
-      id,
-      title,
-      body,
-      const NotificationDetails(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
           AppConstants.notificationChannelId,
           AppConstants.notificationChannelName,
@@ -221,7 +229,7 @@ class NotificationService {
   }
 
   Future<void> cancelNotification(int id) async {
-    await _notificationsPlugin.cancel(id);
+    await _notificationsPlugin.cancel(id: id);
   }
 
   Future<void> cancelAll() async {

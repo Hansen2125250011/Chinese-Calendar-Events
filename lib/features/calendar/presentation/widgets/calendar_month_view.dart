@@ -56,7 +56,7 @@ class _CalendarMonthViewState extends ConsumerState<CalendarMonthView> {
       }
     });
 
-    final viewMode = ref.watch(calendarViewModeNotifierProvider);
+    final viewMode = ref.watch(calendarViewModeProvider);
 
     return Column(
       children: [
@@ -77,7 +77,7 @@ class _CalendarMonthViewState extends ConsumerState<CalendarMonthView> {
                 child: GestureDetector(
                   onTap: () {
                     ref
-                        .read(calendarViewModeNotifierProvider.notifier)
+                        .read(calendarViewModeProvider.notifier)
                         .setMode(CalendarViewMode.year);
                   },
                   child: Text(

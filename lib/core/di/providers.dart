@@ -1,4 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:chinese_calendar/core/database/app_database.dart';
 import 'package:chinese_calendar/features/calendar/data/repositories/lunar_repository_impl.dart';

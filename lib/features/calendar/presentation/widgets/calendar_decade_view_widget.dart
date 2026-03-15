@@ -106,7 +106,7 @@ class _CalendarDecadeViewWidgetState
                           .read(currentMonthProvider.notifier)
                           .setMonth(DateTime(year, currentMonth.month, 1));
                       ref
-                          .read(calendarViewModeNotifierProvider.notifier)
+                          .read(calendarViewModeProvider.notifier)
                           .setMode(CalendarViewMode.year);
                     },
                     child: Container(

@@ -19,7 +19,7 @@ class CalendarYearViewWidget extends ConsumerWidget {
           child: GestureDetector(
             onTap: () {
               ref
-                  .read(calendarViewModeNotifierProvider.notifier)
+                  .read(calendarViewModeProvider.notifier)
                   .setMode(CalendarViewMode.decade);
             },
             child: Text(
@@ -51,7 +51,7 @@ class CalendarYearViewWidget extends ConsumerWidget {
                 onTap: () {
                   ref.read(currentMonthProvider.notifier).setMonth(date);
                   ref
-                      .read(calendarViewModeNotifierProvider.notifier)
+                      .read(calendarViewModeProvider.notifier)
                       .setMode(CalendarViewMode.month);
                 },
                 child: Container(

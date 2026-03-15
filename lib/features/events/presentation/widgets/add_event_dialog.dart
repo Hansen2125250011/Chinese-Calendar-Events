@@ -152,7 +152,7 @@ class _AddEventDialogState extends ConsumerState<AddEventDialog> {
               ),
               if (_enableReminder) ...[
                 DropdownButtonFormField<int>(
-                  value: _reminderDaysBefore,
+                  initialValue: _reminderDaysBefore,
                   decoration: const InputDecoration(labelText: 'Remind me'),
                   items: const [
                     DropdownMenuItem(value: 0, child: Text('On the day')),

@@ -1,4 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:chinese_calendar/features/events/domain/entities/traditional_event.dart';
 import 'package:chinese_calendar/core/di/providers.dart';
