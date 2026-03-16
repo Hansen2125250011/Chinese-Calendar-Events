@@ -146,21 +146,10 @@ class DayDetailView extends ConsumerWidget {
 
                   // Custom Events
                   Consumer(builder: (context, ref, _) {
-                    final customEventsAsync = ref.watch(customEventsProvider);
+                    final customEventsAsync = ref.watch(
+                        customEventsForDateProvider(selectedDate, lunar));
                     return customEventsAsync.when(
-                      data: (events) {
-                        final customOnDay = events.where((e) {
-                          if (e.isLunar) {
-                            return e.month == lunar.month &&
-                                e.day == lunar.day &&
-                                (e.year == null || e.year == lunar.year);
-                          } else {
-                            return e.month == selectedDate.month &&
-                                e.day == selectedDate.day &&
-                                (e.year == null || e.year == selectedDate.year);
-                          }
-                        }).toList();
-
+                      data: (customOnDay) {
                         if (customOnDay.isEmpty) return const SizedBox.shrink();
 
                         return Column(
@@ -220,6 +209,7 @@ class DayDetailView extends ConsumerWidget {
 
                     return eventsAsync.when(
                       data: (events) {
+                        print('DayDetailView: Building for lunar date $lunar with ${events.length} events');
                         if (events.isEmpty) {
                           // Only show "No festivities" if NO custom events either?
                           // For now check logic is separated.

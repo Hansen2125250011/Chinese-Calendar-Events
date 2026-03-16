@@ -5,6 +5,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'dart:developer' as dev;
 import 'package:flutter/foundation.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 @pragma('vm:entry-point')
 void notificationTapBackground(NotificationResponse notificationResponse) {
@@ -20,7 +21,7 @@ class NotificationService {
 
   Future<void> init() async {
     if (_isInitialized) {
-      dev.log('NotificationService: Already initialized, skipping.');
+      debugPrint('NotificationService: Already initialized, skipping.');
       return;
     }
     if (_initFuture != null) {
@@ -42,9 +43,8 @@ class NotificationService {
     try {
       final String timeZoneName = (await FlutterTimezone.getLocalTimezone()).identifier;
       tz.setLocalLocation(tz.getLocation(timeZoneName));
-      dev.log('NotificationService: Local timezone set to $timeZoneName');
       debugPrint('NotificationService: Local timezone set to $timeZoneName');
-      dev.log(
+      debugPrint(
           'NotificationService: Current TZ time: ${tz.TZDateTime.now(tz.local)}');
       debugPrint(
           'NotificationService: Current TZ time: ${tz.TZDateTime.now(tz.local)}');
@@ -53,6 +53,10 @@ class NotificationService {
           'NotificationService: Failed to get local timezone, falling back to UTC. Error: $e');
       debugPrint(
           'NotificationService: Failed to get local timezone, falling back to UTC. Error: $e');
+      // CRITICAL: Must initialize tz.local even on failure to avoid LateInitializationError
+      try {
+        tz.setLocalLocation(tz.getLocation('UTC'));
+      } catch (_) {}
     }
 
     await _createNotificationChannel();
@@ -68,12 +72,11 @@ class NotificationService {
     await _notificationsPlugin.initialize(
       settings: initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        dev.log('NotificationService: Notification tapped in foreground: ${response.id}');
+        debugPrint('NotificationService: Notification tapped in foreground: ${response.id}');
       },
       onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
     );
     _isInitialized = true;
-    dev.log('NotificationService: Initialization complete.');
     debugPrint('NotificationService: Initialization complete.');
   }
 
@@ -82,12 +85,11 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
-    dev.log('NotificationService: Permission request result: $granted');
+    debugPrint('NotificationService: Permission request result: $granted');
     return granted;
   }
 
   Future<bool> isPermissionGranted() async {
-    // Prefer a non-invasive check if the platform supports it.
     final androidImpl =
         _notificationsPlugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
@@ -95,9 +97,21 @@ class NotificationService {
       final bool? enabled = await androidImpl?.areNotificationsEnabled();
       if (enabled != null) return enabled;
     } catch (_) {}
-
-    // Fallback: don't trigger a permission prompt; return false if unknown.
     return false;
+  }
+
+  /// Checks if the app is allowed to schedule exact alarms (Android 12+).
+  Future<bool> canScheduleExactAlarms() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return true;
+
+    try {
+      // For Android 14+ (SDK 34+), we need to check this specifically
+      // Permission.scheduleExactAlarm is available in permission_handler 11+
+      return await Permission.scheduleExactAlarm.isGranted;
+    } catch (e) {
+      debugPrint('NotificationService: Error checking exact alarm permission: $e');
+      return true; // Fallback to assuming true if error
+    }
   }
 
   Future<void> scheduleNotification({
@@ -106,10 +120,24 @@ class NotificationService {
     required String body,
     required DateTime scheduledDate,
   }) async {
-    // Check for exact alarm permission on Android 12+
-    // But zonedSchedule with exact mode will throw if not permitted.
-    dev.log(
+    if (scheduledDate.isBefore(DateTime.now())) {
+      debugPrint('NotificationService: Skipping past date: $scheduledDate');
+      return;
+    }
+
+    debugPrint(
         'NotificationService: Scheduling notification ID $id at $scheduledDate');
+    
+    // Determine schedule mode based on permissions
+    final bool canExact = await canScheduleExactAlarms();
+    final AndroidScheduleMode mode = canExact 
+        ? AndroidScheduleMode.exactAllowWhileIdle 
+        : AndroidScheduleMode.inexactAllowWhileIdle;
+
+    if (!canExact) {
+      debugPrint('NotificationService: Exact alarm permission not granted, using inexact mode for ID $id');
+    }
+
     try {
       await _notificationsPlugin.zonedSchedule(
         id: id,
@@ -127,45 +155,11 @@ class NotificationService {
             visibility: NotificationVisibility.public,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: mode,
       );
-      dev.log('NotificationService: Exact notification scheduled successfully');
-      debugPrint(
-          'NotificationService: Exact notification scheduled successfully for $id at $scheduledDate');
+      debugPrint('NotificationService: Notification scheduled successfully (mode: ${mode.name})');
     } catch (e) {
-      dev.log(
-          'NotificationService: Precise scheduling failed, falling back to inexact. Error: $e');
-      debugPrint('NotificationService: Precise scheduling failed: $e');
-      // Fallback to inexact if exact is not permitted
-      try {
-        await _notificationsPlugin.zonedSchedule(
-          id: id,
-          title: title,
-          body: body,
-          scheduledDate: tz.TZDateTime.from(scheduledDate, tz.local),
-          notificationDetails: const NotificationDetails(
-            android: AndroidNotificationDetails(
-              AppConstants.notificationChannelId,
-              AppConstants.notificationChannelName,
-              channelDescription: AppConstants.notificationChannelDesc,
-              importance: Importance.max,
-              priority: Priority.high,
-              showWhen: true,
-              visibility: NotificationVisibility.public,
-            ),
-          ),
-          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        );
-        dev.log(
-            'NotificationService: Inexact notification scheduled successfully');
-        debugPrint(
-            'NotificationService: Inexact notification scheduled successfully for $id at $scheduledDate');
-      } catch (e2) {
-        dev.log(
-            'NotificationService: ALL scheduling attempts failed. Error: $e2');
-        debugPrint(
-            'NotificationService: ALL scheduling attempts failed. Error: $e2');
-      }
+      debugPrint('NotificationService: Scheduling failed: $e');
     }
   }
 

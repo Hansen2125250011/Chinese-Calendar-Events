@@ -1,3 +1,4 @@
+import 'package:chinese_calendar/core/database/mappers.dart';
 import 'package:chinese_calendar/core/services/notification_service.dart';
 import 'package:chinese_calendar/features/events/domain/entities/traditional_event.dart';
 import 'package:chinese_calendar/features/notifications/domain/entities/notification_settings.dart';
@@ -5,7 +6,7 @@ import 'package:chinese_calendar/features/notifications/domain/repositories/noti
 import 'package:chinese_calendar/features/calendar/domain/repositories/lunar_repository.dart';
 import 'package:chinese_calendar/core/database/app_database.dart';
 import 'package:drift/drift.dart';
-import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'dart:developer' as dev;
 
 class NotificationRepositoryImpl implements NotificationRepository {
@@ -55,14 +56,12 @@ class NotificationRepositoryImpl implements NotificationRepository {
       final scheduledTime = DateTime(reminderDate.year, reminderDate.month,
           reminderDate.day, hour, minute);
 
-      dev.log(
-          'NotificationRepository: Traditional Event "${event.id}" checkYear $checkYear calculated $scheduledTime',
-          name: 'NotificationRepository');
-
+      debugPrint(
+          'NotificationRepository: Traditional Event "${event.id}" checkYear $checkYear calculated $scheduledTime');
+ 
       if (scheduledTime.isAfter(now)) {
-        dev.log(
-            'NotificationRepository: Scheduling Traditional Event "${event.id}" for $scheduledTime (ID: $id)',
-            name: 'NotificationRepository');
+        debugPrint(
+            'NotificationRepository: Scheduling Traditional Event "${event.id}" for $scheduledTime (ID: $id)');
         await _service.scheduleNotification(
           id: id,
           title: event.localizedNames['en'] ?? event.name,
@@ -74,9 +73,8 @@ class NotificationRepositoryImpl implements NotificationRepository {
           scheduledTime.isAfter(now.subtract(const Duration(days: 1)))) {
         // Fallback for today if just missed (like custom events)
         final fallbackTime = now.add(const Duration(minutes: 1));
-        dev.log(
-            'NotificationRepository: Traditional Event "${event.id}" was earlier today. Scheduling fallback: $fallbackTime',
-            name: 'NotificationRepository');
+        debugPrint(
+            'NotificationRepository: Traditional Event "${event.id}" was earlier today. Scheduling fallback: $fallbackTime');
         await _service.scheduleNotification(
           id: id,
           title: event.localizedNames['en'] ?? event.name,
@@ -85,17 +83,17 @@ class NotificationRepositoryImpl implements NotificationRepository {
         );
         break;
       } else {
-        dev.log(
-            'NotificationRepository: Traditional Event "${event.id}" in past ($scheduledTime). Checking next year.',
-            name: 'NotificationRepository');
+        debugPrint(
+            'NotificationRepository: Traditional Event "${event.id}" in past ($scheduledTime). Checking next year.');
       }
     }
   }
-
-    @override
-    Future<void> scheduleTraditionalEvents(List<TraditionalEvent> events,
+ 
+  @override
+  Future<void> scheduleTraditionalEvents(List<TraditionalEvent> events,
       bool enable, NotificationSettings settings) async {
     if (!enable) {
+      debugPrint('NotificationRepository: Notifications disabled, canceling all traditional events.');
       final List<Future<void>> cancelFutures = events
           .map((event) =>
               _service.cancelNotification(_generateNotificationId(event.id)))
@@ -103,18 +101,25 @@ class NotificationRepositoryImpl implements NotificationRepository {
       await Future.wait(cancelFutures);
       return;
     }
-
-    dev.log(
-        'NotificationRepository: Syncing ${events.length} traditional events',
-        name: 'NotificationRepository');
-
+ 
+    debugPrint(
+        'NotificationRepository: Syncing ${events.length} traditional events');
+ 
     // Only schedule enabled events in parallel
     final enabledEvents = events.where((e) => e.notificationsEnabled).toList();
-    final List<Future<void>> scheduleFutures = enabledEvents
-        .map((event) => scheduleEventNotification(event, settings))
-        .toList();
-
+    debugPrint('NotificationRepository: ${enabledEvents.length} events have notifications enabled.');
+    
+    int completed = 0;
+    final List<Future<void>> scheduleFutures = enabledEvents.map((event) async {
+      await scheduleEventNotification(event, settings);
+      completed++;
+      if (completed % 10 == 0 || completed == enabledEvents.length) {
+        debugPrint('NotificationRepository: Scheduled $completed/${enabledEvents.length} events...');
+      }
+    }).toList();
+ 
     await Future.wait(scheduleFutures);
+    debugPrint('NotificationRepository: Finished scheduling all traditional events.');
   }
 
   int _generateNotificationId(String key) {
@@ -158,11 +163,11 @@ class NotificationRepositoryImpl implements NotificationRepository {
           reminderDate.day, hour, minute);
 
       final int notificationId = 1000000 + id; // Offset for custom events
-      dev.log(
+      print(
           'NotificationRepository: Custom Event "$name" (One-time) calculated $scheduledTime');
 
       if (scheduledTime.isAfter(now)) {
-        dev.log(
+        print(
             'NotificationRepository: Scheduling Custom Event "$name" for $scheduledTime (ID: $notificationId)');
         await _service.scheduleNotification(
           id: notificationId,
@@ -174,7 +179,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
         // SPECIAL CASE: If scheduled time was EARLIER today, schedule for 1 minute from now
         // so the user gets notified for their newly created event.
         final fallbackTime = now.add(const Duration(minutes: 1));
-        dev.log(
+        print(
             'NotificationRepository: Custom Event "$name" was earlier today ($scheduledTime). Scheduling for fallback: $fallbackTime');
         await _service.scheduleNotification(
           id: notificationId,
@@ -184,7 +189,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
           scheduledDate: fallbackTime,
         );
       } else {
-        dev.log(
+        print(
             'NotificationRepository: Custom Event "$name" in past ($scheduledTime). Not scheduling.');
       }
     } else {
@@ -213,11 +218,11 @@ class NotificationRepositoryImpl implements NotificationRepository {
             reminderDate.day, hour, minute);
 
         final int notificationId = 1000000 + id; // Offset for custom events
-        dev.log(
+        print(
             'NotificationRepository: Custom Event "$name" (Annual) checkYear $checkYear calculated $scheduledTime');
 
         if (scheduledTime.isAfter(now)) {
-          dev.log(
+          print(
               'NotificationRepository: Scheduling Custom Event "$name" for $scheduledTime (ID: $notificationId)');
           await _service.scheduleNotification(
             id: notificationId,
@@ -230,7 +235,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
             scheduledTime.isAfter(now.subtract(const Duration(days: 1)))) {
           // SPECIAL CASE for current year: if reminder was for earlier today, fire soon.
           final fallbackTime = now.add(const Duration(minutes: 1));
-          dev.log(
+          print(
               'NotificationRepository: Custom Event "$name" annual reminder was earlier today. Scheduling fallback: $fallbackTime');
           await _service.scheduleNotification(
             id: notificationId,
@@ -241,7 +246,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
           );
           break; // Stop after scheduling for this year
         } else {
-          dev.log(
+          print(
               'NotificationRepository: Custom Event "$name" checkYear $checkYear is past ($scheduledTime). Checking next year.');
         }
       }
@@ -274,7 +279,8 @@ class NotificationRepositoryImpl implements NotificationRepository {
 
   @override
   Future<NotificationSettings> getSettings() async {
-    final row = await _db.select(_db.appSettings).getSingleOrNull();
+    final rows = await _db.select(_db.appSettings).get();
+    final row = rows.firstOrNull;
     if (row == null) return const NotificationSettings();
 
     return NotificationSettings(
@@ -298,8 +304,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
 
   @override
   Future<void> syncAllNotifications() async {
-    dev.log('NotificationRepository: Syncing all notifications...',
-        name: 'NotificationRepository');
+    debugPrint('NotificationRepository: Syncing all notifications...');
 
     // 1. Cancel all
     await _service.cancelAll();
@@ -307,8 +312,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
     // 2. Fetch current settings
     final settings = await getSettings();
     if (!settings.enabled) {
-      dev.log('NotificationRepository: Notifications disabled, skipping sync.',
-          name: 'NotificationRepository');
+      debugPrint('NotificationRepository: Notifications disabled, skipping sync.');
       return;
     }
 
@@ -316,25 +320,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
     final traditionalEvents = await _db.select(_db.traditionalEvents).get();
     for (final entity in traditionalEvents) {
       if (entity.notificationsEnabled) {
-        // Map to domain entity first (using repository logic or similar)
-        // Since we are in the repo, we can manually map or use the event repository
-        // For simplicity here, we'll re-map
-        final Map<String, dynamic> names = jsonDecode(entity.name);
-        final enName = names['en'] ?? entity.name;
-
-        await scheduleEventNotification(
-          TraditionalEvent(
-            id: entity.id,
-            name: enName,
-            localizedNames: names,
-            localizedDescriptions: jsonDecode(entity.description),
-            lunarMonth: entity.lunarMonth,
-            lunarDay: entity.lunarDay,
-            isMajor: entity.isMajor,
-            notificationsEnabled: entity.notificationsEnabled,
-          ),
-          settings,
-        );
+        await scheduleEventNotification(entity.toDomain(), settings);
       }
     }
 
@@ -346,11 +332,12 @@ class NotificationRepositoryImpl implements NotificationRepository {
       // For now, custom events are scheduled if they exist.
       // We need reminder settings for EACH custom event if they are unique.
       // Currently, the UI saves them to UserReminders table too.
-      final reminder = await (_db.select(_db.userReminders)
+      final reminders = await (_db.select(_db.userReminders)
             ..where((t) => t.eventId.equals('custom_${event.id}')))
-          .getSingleOrNull();
+          .get();
 
-      if (reminder != null) {
+      if (reminders.isNotEmpty) {
+        final reminder = reminders.first;
         final timeParts = reminder.time.split(':');
         int rHour = 9;
         int rMinute = 0;
@@ -377,7 +364,6 @@ class NotificationRepositoryImpl implements NotificationRepository {
       }
     }
 
-    dev.log('NotificationRepository: All notifications synced successfully.',
-        name: 'NotificationRepository');
+    print('NotificationRepository: All notifications synced successfully.');
   }
 }

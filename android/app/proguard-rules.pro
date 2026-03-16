@@ -7,3 +7,18 @@
 -keep class com.google.gson.reflect.TypeToken
 -keep class * extends com.google.gson.reflect.TypeToken
 -keepattributes EnclosingMethod
+
+# Drift & SQLite
+-keep class net.simonvis.sqlite3.** { *; }
+-keep class org.sqlite.** { *; }
+-keep class * extends com.drift.drift.** { *; }
+-keep interface com.drift.drift.** { *; }
+-keep class **.TraditionalEvents { *; }
+-keep class **.CustomEvents { *; }
+-keep class **.TraditionalEventEntity { *; }
+-keep class **.CustomEventEntity { *; }
+
+# Prevent stripping of native methods
+-keepclasseswithmembernames class * {
+    native <methods>;
+}

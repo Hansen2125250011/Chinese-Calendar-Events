@@ -1,7 +1,9 @@
 import 'package:chinese_calendar/core/database/app_database.dart';
+import 'package:chinese_calendar/core/database/mappers.dart';
 import 'package:chinese_calendar/features/events/domain/entities/custom_event.dart';
 import 'package:chinese_calendar/features/events/domain/repositories/custom_event_repository.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 
 class CustomEventRepositoryImpl implements CustomEventRepository {
   final AppDatabase _db;
@@ -10,34 +12,44 @@ class CustomEventRepositoryImpl implements CustomEventRepository {
 
   @override
   Future<List<CustomEvent>> getAllEvents() async {
-    final results = await _db.select(_db.customEvents).get();
-    return results
-        .map((e) => CustomEvent(
-              id: e.id,
-              name: e.name,
-              isLunar: e.isLunar,
-              year: e.year,
-              month: e.month,
-              day: e.day,
-              isLeap: e.isLeap,
-            ))
-        .toList();
+    try {
+      final results = await _db.select(_db.customEvents).get();
+      return results.map((e) => e.toDomain()).toList();
+    } catch (e, stack) {
+      debugPrint('CustomEventRepository: Error fetching events: $e');
+      debugPrint(stack.toString());
+      rethrow;
+    }
   }
 
   @override
   Future<int> addEvent(CustomEvent event) async {
-    return _db.into(_db.customEvents).insert(CustomEventsCompanion.insert(
-          name: event.name,
-          isLunar: event.isLunar,
-          year: Value(event.year),
-          month: event.month,
-          day: event.day,
-          isLeap: Value(event.isLeap),
-        ));
+    if (event.name.trim().isEmpty) {
+      throw ArgumentError('Event name cannot be empty');
+    }
+    
+    try {
+      return await _db.into(_db.customEvents).insert(CustomEventsCompanion.insert(
+            name: event.name,
+            isLunar: event.isLunar,
+            year: Value(event.year),
+            month: event.month,
+            day: event.day,
+            isLeap: Value(event.isLeap),
+          ));
+    } catch (e, stack) {
+      debugPrint('CustomEventRepository: Error adding event: $e');
+      debugPrint(stack.toString());
+      rethrow;
+    }
   }
 
   @override
   Future<void> updateEvent(CustomEvent event) async {
+    if (event.name.trim().isEmpty) {
+      throw ArgumentError('Event name cannot be empty');
+    }
+
     await (_db.update(_db.customEvents)
           ..where((tbl) => tbl.id.equals(event.id)))
         .write(

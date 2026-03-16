@@ -250,37 +250,53 @@ class _AddEventDialogState extends ConsumerState<AddEventDialog> {
       isLeap: isLeap,
     );
 
-    int id;
-    if (widget.event != null) {
-      await ref.read(customEventRepositoryProvider).updateEvent(event);
-      id = event.id;
-    } else {
-      id = await ref.read(customEventRepositoryProvider).addEvent(event);
+    try {
+      int id;
+      if (widget.event != null) {
+        await ref.read(customEventRepositoryProvider).updateEvent(event);
+        id = event.id;
+      } else {
+        id = await ref.read(customEventRepositoryProvider).addEvent(event);
+      }
+
+      if (_enableReminder) {
+        await ref.read(eventRepositoryProvider).saveUserReminder(
+              'custom_$id',
+              _reminderDaysBefore,
+              '${_reminderTime.hour.toString().padLeft(2, '0')}:${_reminderTime.minute.toString().padLeft(2, '0')}',
+            );
+        await ref.read(notificationRepositoryProvider).scheduleCustomEvent(
+              id,
+              event.name,
+              event.isLunar,
+              event.month,
+              event.day,
+              event.year,
+              event.isLeap,
+              _reminderDaysBefore,
+              _reminderTime.hour,
+              _reminderTime.minute,
+            );
+      }
+
+      // Refresh list (invalidate provider)
+      ref.invalidate(customEventsProvider);
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Event saved successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save event: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
-
-    if (_enableReminder) {
-      await ref.read(eventRepositoryProvider).saveUserReminder(
-            'custom_$id',
-            _reminderDaysBefore,
-            '${_reminderTime.hour.toString().padLeft(2, '0')}:${_reminderTime.minute.toString().padLeft(2, '0')}',
-          );
-      await ref.read(notificationRepositoryProvider).scheduleCustomEvent(
-            id,
-            event.name,
-            event.isLunar,
-            event.month,
-            event.day,
-            event.year,
-            event.isLeap,
-            _reminderDaysBefore,
-            _reminderTime.hour,
-            _reminderTime.minute,
-          );
-    }
-
-    // Refresh list (invalidate provider)
-    ref.invalidate(customEventsProvider);
-
-    if (mounted) Navigator.pop(context);
   }
 }

@@ -9,59 +9,36 @@ import 'package:chinese_calendar/core/providers/locale_provider.dart';
 import 'package:chinese_calendar/core/providers/theme_provider.dart';
 import 'package:chinese_calendar/core/router/app_router.dart';
 
-import 'package:chinese_calendar/core/providers/reminder_settings_provider.dart';
-import 'package:chinese_calendar/features/notifications/domain/entities/notification_settings.dart';
+import 'package:chinese_calendar/core/services/background_tasks.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize Background Tasks early
+  await BackgroundTasks.init();
+
   final container = ProviderContainer();
 
-  // Pre-initialize services
-  final notificationRepo = container.read(notificationRepositoryProvider);
+  // 1. Initialize Essential Non-Blocking Services
   await container.read(notificationServiceProvider).init();
-  await notificationRepo.requestPermissions();
-  // Optional: force debug notifications in release by setting
-  // --dart-define=FORCE_DEBUG_NOTIFS=true when building the app.
-  const bool forceDebugNotifs = bool.fromEnvironment('FORCE_DEBUG_NOTIFS', defaultValue: false);
-  if (kDebugMode || forceDebugNotifs) {
-    // schedule debug notifications to help reproduce delivery issues on devices
-    try {
-      await container.read(notificationServiceProvider).scheduleDebugNotifications();
-    } catch (e) {
-      // ignore errors here; debug helper shouldn't crash startup
-    }
-  }
+  
+  // 2. Event Seeding (Keep it separate from UI startup)
   final eventRepo = container.read(eventRepositoryProvider);
-  await eventRepo.initialize();
+  
+  // ignore: unawaited_futures
+  eventRepo.initialize().then((_) {
+    debugPrint('Main: Event repository initialized in background.');
+    // Trigger notification sync after database is ready
+    BackgroundTasks.scheduleSync();
+  }).catchError((e) {
+    debugPrint('Main: Event repo init error: $e');
+  });
 
+  debugPrint('Main: Starting app...');
   runApp(UncontrolledProviderScope(
     container: container,
     child: const MyApp(),
   ));
-
-  // Background initialization after app starts
-  _initBackgroundTasks(container);
-}
-
-Future<void> _initBackgroundTasks(ProviderContainer container) async {
-  // Sync traditional festival notifications
-  final eventRepo = container.read(eventRepositoryProvider);
-  final settings = container.read(reminderSettingsProvider);
-
-  if (settings.enableTraditionalReminders) {
-    final allEvents = await eventRepo.getAllTraditionalEvents();
-    final notificationRepo = container.read(notificationRepositoryProvider);
-    await notificationRepo.scheduleTraditionalEvents(
-      allEvents,
-      true,
-      NotificationSettings(
-        enabled: true,
-        daysBefore: settings.defaultDaysBefore,
-        reminderTime: settings.reminderTimeStr,
-      ),
-    );
-  }
 }
 
 class MyApp extends ConsumerStatefulWidget {
